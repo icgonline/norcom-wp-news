@@ -2,7 +2,7 @@
 
 /*
 
-Plugin Name: Northern Commercials News
+Plugin Name: Nor Com News
 
 Plugin URI: https://icg.agency
 
@@ -20,7 +20,7 @@ Text Domain: norcomnews
 
 */
 
-/*function find_wordpress_base_path() {
+function find_wordpress_base_path() {
     $dir = dirname(__FILE__);
     do {
         //it is possible to check for other files here
@@ -35,7 +35,7 @@ define( 'BASE_PATH', find_wordpress_base_path()."/" );
 define('WP_USE_THEMES', false);
 global $wp, $wp_query, $wp_the_query, $wp_rewrite, $wp_did_header;
 require(BASE_PATH . 'wp-load.php');
-
+/*
 USE THIS URL: https://posts-norcom.icgonline.co.uk/wp-admin/plugins.php?domigrate=true
 */
 define('SITE_ROOT', str_replace( 'wp-content', '', WP_CONTENT_DIR));
@@ -47,7 +47,7 @@ require_once(SITE_ROOT . 'wp-admin' . '/includes/media.php');
 class newsSync {
 
   public function __construct() {
-      $this->wpdb2 = new WPDB( 'hhZx240', 'Iu4lu@34', 'norcom', 'localhost');
+      $this->wpdb2 = new wpdb( 'norc-news-user', '5zBi7v$21', 'norcom-news-posts', 'localhost');
       $this->currentTime = time();
       $this->newsArray = [];
 
@@ -65,7 +65,7 @@ class newsSync {
     $headers[] = 'Content-type: text/html; charset=iso-8859-1';
 
     // Additional headers
-    $headers[] = 'From: James Sharp Error <error@news-jamessharp.icgonline.co.uk>';
+    $headers[] = 'From: Northern Commercials <error@posts-norcom.icgonline.co.uk>';
     mail( $to, $subject, $body, implode("\r\n", $headers) );
   }
 
@@ -153,8 +153,9 @@ public function unserializeSensible($value) {
       $newcategories = array('general');
 
       $catsfordb = implode(',', array_map('self::add_quotes', $categories));
+		
 
-      $rows = $this->wpdb2->get_results("SELECT * from post where post_type_id IN ("1") AND is_active >= '1' ORDER BY id");
+	  $rows = $this->wpdb2->get_results("SELECT * from post where post_type_id IN ('1') AND is_active >= '1' ORDER BY id");
       //var_dump($rows);
       //exit;
       //echo "<ul>";
@@ -179,14 +180,13 @@ public function unserializeSensible($value) {
         $deleted = $obj->date_down;
         $published_date = $obj->date_created;
         $data = null;
-        //var_dump($published_date);
-        if(isset($obj->data)){
+		// var_dump($rows);
+        if(isset($obj->data)) {
             $data = $obj->data;
             //echo "<br>";
-            //var_dump($obj->data);
             //echo "<br>";
             $content_data = $this->unserializeSensible($data);
-            //var_dump($content_data);
+            var_dump($content_data);
             //echo $id."-".$title;
 
             if($content_data === false){
@@ -202,7 +202,7 @@ public function unserializeSensible($value) {
             if(isset($content_data->content)){
               $content = $content_data->content_1;
             }
-            $date = $content_data->visible_from;
+            $date = $content_data->date_created;
             //var_dump($date);
             $canonical = false;
             if(isset($content_data->meta_canonical)){
@@ -274,11 +274,11 @@ public function unserializeSensible($value) {
 
             }
         }
-        //if(!isset($obj->data)){
-        //  echo "No content data";
-        //}
+        if(!isset($obj->data)){
+          echo "No content data. ";
+        }
       }
-      //echo "</ul>";
+      echo "</ul>";
 
     }
 
