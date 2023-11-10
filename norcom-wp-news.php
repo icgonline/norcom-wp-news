@@ -205,12 +205,18 @@ public function unserializeSensible($value) {
           $status = "draft";
         }
           //echo "<li>".$slug."</li>";
-           
+        preg_match_all('/<img[^>]*?\s+src\s*=\s*"([^"]+)"[^>]*?>/i', $content, $matches);
+
+        foreach($matches[1] as $match){
+            echo $match.PHP_EOL;
+        }
+
+        //exit;
        
-                $content = html_entity_decode($content);
-               $content = preg_replace("/<img[^>]+\>/i", " ", $content);
-                $content = apply_filters('the_content', $content);
-                $content = str_replace(']]>', ']]>', $content);
+        $content = html_entity_decode($content);
+        $content = preg_replace("/<img[^>]+\>/i", " ", $content);
+        $content = apply_filters('the_content', $content);
+        $content = str_replace(']]>', ']]>', $content);
 
                echo "Entering post array";
              $_postArray = [
