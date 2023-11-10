@@ -44,6 +44,15 @@ require_once(SITE_ROOT . 'wp-admin' . '/includes/image.php');
 require_once(SITE_ROOT . 'wp-admin' . '/includes/file.php');
 require_once(SITE_ROOT . 'wp-admin' . '/includes/media.php');
 
+function migrate_news()
+{
+  if ( isset($_GET['domigrate']) ) {
+    $m = new newsSync();
+    $m->run();
+  }
+}
+add_action('init', 'migrate_news');
+
 class newsSync {
 
   public function __construct() {
@@ -130,6 +139,7 @@ public function unserializeSensible($value) {
       $right_length = strlen($string); // yes, strlen even for UTF-8 characters, PHP wants the mem size, not the char count
       return 's:' . $right_length . ':"' . $string . '";';
     }
+
     function fix_serialized($string) {
         // securities
         if ( !preg_match('/^[aOs]:/', $string) ) return $string;
@@ -147,15 +157,13 @@ public function unserializeSensible($value) {
 
     public function run() {
 
-
-
       $categories = array('template');
       $newcategories = array('general');
 
       $catsfordb = implode(',', array_map('self::add_quotes', $categories));
 		
 
-	  $rows = $this->wpdb2->get_results("SELECT * from post where post_type_id IN ('1') AND is_active >= '1' ORDER BY id");
+	    $rows = $this->wpdb2->get_results("SELECT * from post where post_type_id IN ('1') AND is_active = '1' ORDER BY id");
       //var_dump($rows);
       //exit;
       //echo "<ul>";
@@ -165,7 +173,7 @@ public function unserializeSensible($value) {
         $type =  $obj->post_type_id;
         $newtype = null;
         $catid = 0;
-        foreach ($categories as $key => $cat) {
+        /*foreach ($categories as $key => $cat) {
           if($cat == $type){
             $newtype = $newcategories[$key];
             $post_category = get_term_by('slug', $newtype, 'category');
@@ -173,58 +181,32 @@ public function unserializeSensible($value) {
                 $catid = $post_category->term_id;
             }
           }
-        }
+        }*/
         $f1 = preg_replace("/^.*\//","",$slug);
         $title = $obj->title;
         $published = $obj->is_active;
         $deleted = $obj->date_down;
         $published_date = $obj->date_created;
+        $subtitle = $obj->sub_title;
+        if($subtitle != ""){
+          $content = "<h2>".$obj->sub_title."<h2>".$obj->content_1;
+        }
+        if($subtitle == ""){
+          $content = $obj->content_1;
+        }
         $data = null;
-		// var_dump($rows);
-        if(isset($obj->data)) {
-            $data = $obj->data;
-            //echo "<br>";
-            //echo "<br>";
-            $content_data = $this->unserializeSensible($data);
-            var_dump($content_data);
-            //echo $id."-".$title;
-
-            if($content_data === false){
-              $this->logError($id, $title, $data);
-              continue;
-            }
-            //var_dump($content);
-            $excerpt = '';
-            if(isset($content_data->snippet)){
-              $excerpt = $content_data->label;
-            }
-            $content = '';
-            if(isset($content_data->content)){
-              $content = $content_data->content_1;
-            }
-            $date = $content_data->date_created;
-            //var_dump($date);
-            $canonical = false;
-            if(isset($content_data->meta_canonical)){
-              $canonical = $content_data->meta_canonical;
-              //Set this using Yoast
-            }
-            $banner = false;
-            if(isset($content_data->banner)){
-              $banner = $content_data->banner;
-              //Set this using Yoast
-            }
-
-            $status = "publish";
-            if($published != 1){
-              $status = "draft";
-            }
-             //echo "<li>".$slug."</li>";
-            if($deleted == 1){
-              echo "This post is deleted.";
-            }
-
-             if($deleted != 1){
+		    // var_dump($rows);
+        //$date = $obj->date_created;
+        //var_dump($date);
+  
+  
+        $status = "publish";
+        if($published != 1){
+          $status = "draft";
+        }
+          //echo "<li>".$slug."</li>";
+           
+       
                 $content = html_entity_decode($content);
                $content = preg_replace("/<img[^>]+\>/i", " ", $content);
                 $content = apply_filters('the_content', $content);
@@ -235,12 +217,12 @@ public function unserializeSensible($value) {
                 'ID' => 0,
                 'post_author' => 1,
                 'post_content' => '<!-- wp:html -->'.$content.'<!-- /wp:html -->',
-                'post_excerpt' => html_entity_decode($excerpt),
+                'post_excerpt' => '',
                 'post_title' => html_entity_decode($title),
-                'post_category' => array( $catid ),
+                'post_category' => array( "1" ),
                 'post_name'=> $f1,
                 'post_status' => $status,
-                'post_date' => date("Y-m-d H:i:s", substr($published_date, 0, 10)),
+                'post_date' => $published_date,
                 'comment_status' => 'closed',
                 'ping_status' => 'closed',
                 'post_type' => 'post'
@@ -253,10 +235,8 @@ public function unserializeSensible($value) {
 
                 if(!is_wp_error($result)){
                   echo "Result: ".$result;
-                  if($canonical){
-                    add_post_meta( $result, '_yoast_wpseo_canonical', $canonical, true );
-                  }
-                  if($banner){
+                 
+                  /*if($banner){
                     $image = media_sideload_image( $banner, $result, $title, 'id' );
                     if($image && !is_wp_error($image)){
                       set_post_thumbnail($result, $image);
@@ -266,32 +246,25 @@ public function unserializeSensible($value) {
                           )
                       );
                     }
-                  }
+                  }*/
                 }
                 if($result == 0 || is_wp_error($result)){
                   var_dump($result);
                 }
 
-            }
-        }
-        if(!isset($obj->data)){
-          echo "No content data. ";
-        }
-      }
+           
+     
+              if(!isset($obj->data)){
+                echo "No content data. ";
+              }
+    
       echo "</ul>";
 
-    }
-
-}
-
-function migrate_news()
-{
-  if ( isset($_GET['domigrate']) ) {
-    $m = new newsSync();
-    $m->run();
   }
+
 }
-add_action('init', 'migrate_news');
+
+}
 
 function exception_error_handler($errno, $errstr, $errfile, $errline ) {
     throw new ErrorException($errstr, $errno, 0, $errfile, $errline);
